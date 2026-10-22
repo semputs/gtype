@@ -1,0 +1,2 @@
+- three.module.min.js, three.core.min.js, addons/: three.js r180, MIT License, Copyright © 2010-2025 three.js authors. https://github.com/mrdoob/three.js
+- three-vrm.module.min.js: @pixiv/three-vrm, MIT License, Copyright (c) 2019-2026 pixiv Inc. https://github.com/pixiv/three-vrm
