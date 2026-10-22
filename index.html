@@ -165,7 +165,7 @@ body {
   <section class="screen" id="title">
     <div class="panel">
       <h1 class="logo">Gal<b>Type</b></h1>
-      <p class="tag">Animation demo: Hana runs at you, gets right up close and flustered, then strikes. Type her word first and watch her take the rejection badly.</p>
+      <p class="tag">Animation demo: Hana runs at you, gets right up close and flustered, then strikes. Type her word first and watch her take the rejection badly. (Festival dress code: everyone in whites.)</p>
       <div class="frames">
         <figure><img src="assets/sprites/hana_walk1.png" alt="Hana, run frame 1"><figcaption>Run 1</figcaption></figure>
         <figure><img src="assets/sprites/hana_walk2.png" alt="Hana, run frame 2"><figcaption>Run 2</figcaption></figure>
@@ -209,7 +209,7 @@ const $ = (id) => document.getElementById(id);
 const stage = $('stage'), canvas = $('hall'), actors = $('actors');
 const SPR = (c, e) => `assets/sprites/${c}_${e}.png`;
 const FRAMES = ['walk1', 'walk2', 'flustered', 'defeated'];
-const FRAME_H = { defeated: 1.195 }; // frame canvas height relative to the run frames (her tears fly above her head)
+const FRAME_H = {}; // per-frame canvas height relative to the run frames, for frames with effects above the head
 const preload = FRAMES.map(f => { const i = new Image(); i.src = SPR('hana', f); return i; });
 const STEP_TIME = 0.16;   // seconds per run frame
 const FRONT_HOLD = 1.6;   // seconds she stands flustered in front of you before the hit
