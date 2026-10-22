@@ -1,0 +1,64 @@
+{
+ "hana": {
+  "run": "x_hana_run_2",
+  "flus": "x_hana_flus_t0",
+  "defe": "x_hana_defe_i2"
+ },
+ "mio": {
+  "run": "x_mio_run_2",
+  "flus": "x_mio_flus_i2",
+  "defe": "x_mio_defe_t0",
+  "defe_scale": 0.86
+ },
+ "rei": {
+  "run": "x_rei_run_2",
+  "flus": "x_rei_flus_i2",
+  "defe": "x_rei_defe_t0"
+ },
+ "sayaka": {
+  "run": "x_sayaka_run_1",
+  "flus": "x_sayaka_flus_i2",
+  "defe": "x_sayaka_defe_i3"
+ },
+ "nemu": {
+  "run": "x_nemu_run_0",
+  "flus": "x_nemu_flus_i2",
+  "defe": "x_nemu_defe_t0"
+ },
+ "chika": {
+  "run": "x_chika_run_0",
+  "flus": "x_chika_flus_i3",
+  "defe": "x_chika_defe_i3"
+ },
+ "ayame": {
+  "run": "x_ayame_run_2",
+  "flus": "x_ayame_flus_i2",
+  "defe": "x_ayame_defe_t0"
+ },
+ "haruka": {
+  "run": "x_haruka_run_1",
+  "flus": "x_haruka_flus_i3",
+  "defe": "x_haruka_defe_i3"
+ },
+ "tomoe": {
+  "run": "x_tomoe_run_2",
+  "flus": "x_tomoe_flus_i2",
+  "defe": "x_tomoe_defe2_i1",
+  "defe_scale": 0.72
+ },
+ "kaede": {
+  "run": "x_kaede_run_0",
+  "dash": "x_kaede_dash_0",
+  "dash_scale": 0.86,
+  "flus": "x_kaede_flus_i3",
+  "defe": "x_kaede_defe_i2"
+ },
+ "akira": {
+  "run": "x_akira_run_2",
+  "dash": "x_akira_dash_0",
+  "dash_scale": 0.86,
+  "flus": "x_akira_flus_t1",
+  "defe": "x_akira_defe_t1",
+  "defe_scale": 0.78
+ }
+}

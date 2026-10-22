@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GalType Animation Demo</title>
+<title>GalType</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Cpath d=%22M12 21s-7.5-4.6-9.6-9.2C.9 8.5 3 5 6.4 5c2.1 0 3.5 1.2 4.3 2.4l1.3 1.8 1.3-1.8C14.1 6.2 15.5 5 17.6 5 21 5 23.1 8.5 21.6 11.8 19.5 16.4 12 21 12 21z%22 fill=%22%23ff5c97%22/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -66,6 +66,17 @@ body {
 @keyframes pulse { to { box-shadow: 0 0 0 calc(var(--u) * .45) rgba(255,61,94,.35); } }
 .demo-btn { position: absolute; left: calc(var(--u) * 1.6); bottom: calc(var(--u) * 1.6); pointer-events: auto; font: 800 calc(var(--u) * .9)/1 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: #fff; background: rgba(29,20,48,.7); border: 0; border-radius: 99px; padding: calc(var(--u) * .5) calc(var(--u) * .9); cursor: pointer; }
 .demo-btn[aria-pressed="true"] { background: var(--sakura); }
+.roster { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: calc(var(--u) * .5); align-items: end; width: 100%; }
+.roster figure { margin: 0; display: grid; justify-items: center; gap: calc(var(--u) * .3); }
+.roster img { height: calc(var(--u) * 10); width: auto; max-width: 100%; object-fit: contain; object-position: bottom; }
+.roster figcaption { font-size: calc(var(--u) * .8); font-weight: 800; letter-spacing: .06em; color: #fff; text-transform: uppercase; white-space: nowrap; }
+.roster .boss figcaption { color: var(--sun); }
+.btn.ghost { background: transparent; color: #fff; box-shadow: inset 0 0 0 2px rgba(255,255,255,.5); font-size: calc(var(--u) * 1.2); }
+.btn-row { display: flex; gap: calc(var(--u) * 1.2); align-items: center; }
+.boss-timer { position: absolute; left: 50%; top: calc(var(--u) * 4.2); transform: translateX(-50%); width: calc(var(--u) * 26); height: calc(var(--u) * .7); border-radius: 99px; background: rgba(29,20,48,.7); overflow: hidden; }
+.boss-timer[hidden] { display: none; }
+.boss-timer i { display: block; height: 100%; width: 100%; background: var(--sun); transform-origin: left; }
+.boss-timer.low i { background: var(--alarm); }
 .frames { display: flex; gap: calc(var(--u) * 1.6); align-items: flex-end; justify-content: center; }
 .frames figure { margin: 0; display: grid; justify-items: center; gap: calc(var(--u) * .4); }
 .frames img { height: calc(var(--u) * 14); width: auto; }
@@ -155,7 +166,8 @@ body {
         <div class="hearts" id="hearts"></div>
       </div>
     </div>
-    <div class="stagebar" id="stagebar">Animation demo · Hana</div>
+    <div class="stagebar" id="stagebar">Stage 1</div>
+    <div class="boss-timer" id="btimer" hidden><i></i></div>
     <div class="typed-echo" id="echo"><span class="caret"></span></div>
     <button class="mute" id="mute" type="button">Sound on</button>
     <button class="demo-btn" id="slow" type="button" aria-pressed="false">Slow motion</button>
@@ -165,14 +177,9 @@ body {
   <section class="screen" id="title">
     <div class="panel">
       <h1 class="logo">Gal<b>Type</b></h1>
-      <p class="tag">Animation demo: Hana runs at you, gets right up close and flustered, then strikes. Type her word first and watch her take the rejection badly. (Festival dress code: everyone in whites.)</p>
-      <div class="frames">
-        <figure><img src="assets/sprites/hana_walk1.png" alt="Hana, run frame 1"><figcaption>Run 1</figcaption></figure>
-        <figure><img src="assets/sprites/hana_walk2.png" alt="Hana, run frame 2"><figcaption>Run 2</figcaption></figure>
-        <figure><img src="assets/sprites/hana_flustered.png" alt="Hana, flustered"><figcaption>Flustered</figcaption></figure>
-        <figure><img src="assets/sprites/hana_defeated.png" alt="Hana, defeated"><figcaption>Defeated</figcaption></figure>
-      </div>
-      <button class="btn" id="start" type="button">Start</button>
+      <p class="tag">HEARTBEAT misfired and the whole festival is coming to confess. Type their lines before they reach you.</p>
+      <div class="roster" id="roster"></div>
+      <div class="btn-row"><button class="btn" id="start" type="button">Start</button><button class="btn ghost" id="start2" type="button">Skip to stage 2</button></div>
       <p class="hint">Press <kbd>Enter</kbd> to start · <kbd>Backspace</kbd> drops your target · <kbd>Esc</kbd> pauses</p>
     </div>
   </section>
@@ -202,446 +209,7 @@ body {
   <input id="kbd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type here">
 </div>
 
-<script>
-(() => {
-'use strict';
-const $ = (id) => document.getElementById(id);
-const stage = $('stage'), canvas = $('hall'), actors = $('actors');
-const SPR = (c, e) => `assets/sprites/${c}_${e}.png`;
-const FRAMES = ['walk1', 'walk2', 'flustered', 'defeated'];
-const FRAME_H = {}; // per-frame canvas height relative to the run frames, for frames with effects above the head
-const preload = FRAMES.map(f => { const i = new Image(); i.src = SPR('hana', f); return i; });
-const STEP_TIME = 0.16;   // seconds per run frame
-const FRONT_HOLD = 1.6;   // seconds she stands flustered in front of you before the hit
-let timeScale = 1;
-
-/* ---------- characters & words ---------- */
-const CAST = {
-  hana: { name: 'Hana', dur: 6.5, words: ['yay','go go','hey','wow','run','jump','dash','cheer','zoom','fight','race','yes','sprint','high five','lets go','ready','win','catch me','faster','pump up','bounce','kick off','quick','burst','energy','top speed','vroom','hustle','next lap','on fire'] }
-};
-const WAVE_BASE = [
-  ['hana',0.6],['hana',3.2],['hana',5.4],['hana',7.2],['hana',9.4],['hana',11],['hana',12.6],['hana',14.6],
-  ['hana',16],['hana',17.4],['hana',19.2],['hana',20.4],['hana',22],['hana',23.4]
-];
-const LANES = [-0.82, -0.42, 0, 0.42, 0.82];
-
-/* ---------- sizing ---------- */
-let W = 0, H = 0;
-function fit() {
-  const pad = 24;
-  const availW = Math.max(200, document.documentElement.clientWidth - 32);
-  const availH = Math.max(150, window.innerHeight - pad);
-  const w = Math.min(availW, availH * 16 / 9, 1600);
-  stage.style.width = w + 'px';
-  W = w; H = w * 9 / 16;
-  stage.style.setProperty('--u', (w / 100) + 'px');
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  drawHall(ctx, W, H);
-  for (const g of girls) place(g);
-}
-
-/* ---------- hallway background ---------- */
-const HZ = 0.40; // horizon (feet of far-away girls)
-function drawHall(c, w, h) {
-  const vx = w / 2, vy = h * HZ;
-  const far = { l: w * 0.44, r: w * 0.56, t: h * 0.30, b: h * 0.47 };
-  const L = (a, b, t) => a + (b - a) * t;
-  // depth t (0 near .. 1 far) on a corner line
-  const pt = (nx, ny, fx, fy, t) => [L(nx, fx, t), L(ny, fy, t)];
-  const quad = (p, fill) => { c.beginPath(); c.moveTo(...p[0]); for (let i = 1; i < p.length; i++) c.lineTo(...p[i]); c.closePath(); c.fillStyle = fill; c.fill(); };
-  const dz = (i, n) => { const z = i / n; return 1 - 1 / (1 + z * 4.2); }; // perspective spacing
-  // ceiling
-  quad([[0,0],[w,0],[far.r,far.t],[far.l,far.t]], '#f3e6dc');
-  // floor (wood)
-  let g = c.createLinearGradient(0, far.b, 0, h); g.addColorStop(0, '#c89b74'); g.addColorStop(1, '#9a6a4b');
-  quad([[0,h],[w,h],[far.r,far.b],[far.l,far.b]], g);
-  // left wall (windows) & right wall (lockers)
-  quad([[0,0],[far.l,far.t],[far.l,far.b],[0,h]], '#efd9cf');
-  quad([[w,0],[far.r,far.t],[far.r,far.b],[w,h]], '#e9d3cb');
-  // end wall + window glow
-  quad([[far.l,far.t],[far.r,far.t],[far.r,far.b],[far.l,far.b]], '#f6e4d6');
-  g = c.createLinearGradient(0, far.t, 0, far.b); g.addColorStop(0, '#ffcf9d'); g.addColorStop(1, '#ff9fb5');
-  const fw = (far.r - far.l), fh = (far.b - far.t);
-  c.fillStyle = g; c.fillRect(far.l + fw * .2, far.t + fh * .15, fw * .6, fh * .55);
-  // floor planks (lines converging)
-  c.strokeStyle = 'rgba(80,45,30,.22)'; c.lineWidth = 1;
-  for (let i = -8; i <= 8; i++) { c.beginPath(); c.moveTo(w / 2 + i * w / 10, h); c.lineTo(L(far.l, far.r, (i + 8) / 16), far.b); c.stroke(); }
-  for (let i = 1; i < 14; i++) { const t = dz(i, 14); const [x1, y1] = pt(0, h, far.l, far.b, t), [x2] = pt(w, h, far.r, far.b, t); c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y1); c.stroke(); }
-  // floor sheen
-  g = c.createLinearGradient(0, far.b, 0, h); g.addColorStop(0, 'rgba(255,220,200,.35)'); g.addColorStop(.5, 'rgba(255,220,200,0)');
-  quad([[w*.38,h],[w*.62,h],[far.r-fw*.25,far.b],[far.l+fw*.25,far.b]], g);
-  // windows on left wall
-  const N = 6;
-  for (let i = 0; i < N; i++) {
-    const t0 = dz(i + .18, N), t1 = dz(i + .82, N);
-    const wy0 = .14, wy1 = .62; // fraction of wall height
-    const a = pt(0, h * wy0, far.l, L(far.t, far.b, wy0), t0), b = pt(0, h * wy0, far.l, L(far.t, far.b, wy0), t1);
-    const cc = pt(0, h * wy1, far.l, L(far.t, far.b, wy1), t1), d = pt(0, h * wy1, far.l, L(far.t, far.b, wy1), t0);
-    const sky = c.createLinearGradient(0, a[1], 0, d[1]); sky.addColorStop(0, '#ffb98a'); sky.addColorStop(.6, '#ff8fae'); sky.addColorStop(1, '#c58bd6');
-    quad([a, b, cc, d], sky);
-    c.strokeStyle = '#fff5ee'; c.lineWidth = Math.max(1.5, (1 - t0) * w * .006);
-    c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(...cc); c.lineTo(...d); c.closePath(); c.stroke();
-    const m1 = [L(a[0], b[0], .5), L(a[1], b[1], .5)], m2 = [L(d[0], cc[0], .5), L(d[1], cc[1], .5)];
-    c.beginPath(); c.moveTo(...m1); c.lineTo(...m2); c.stroke();
-    // light patch on floor
-    const fa = pt(0, h, far.l, far.b, t0), fb = pt(0, h, far.l, far.b, t1);
-    const reach = .55;
-    quad([fa, fb, [L(fb[0], L(w, far.r, t1), reach * (1 - t1 * .6)), fb[1]], [L(fa[0], L(w, far.r, t0), reach), fa[1]]], 'rgba(255,190,170,.18)');
-  }
-  // lockers on right wall
-  const M = 16;
-  for (let i = 0; i < M; i++) {
-    const t0 = dz(i, M), t1 = dz(i + .94, M);
-    const ly0 = .2, ly1 = .9;
-    const a = pt(w, h * ly0, far.r, L(far.t, far.b, ly0), t0), b = pt(w, h * ly0, far.r, L(far.t, far.b, ly0), t1);
-    const cc = pt(w, h * ly1, far.r, L(far.t, far.b, ly1), t1), d = pt(w, h * ly1, far.r, L(far.t, far.b, ly1), t0);
-    quad([a, b, cc, d], i % 2 ? '#5aa9a6' : '#4f9e9b');
-    c.strokeStyle = 'rgba(20,60,60,.35)'; c.lineWidth = 1; c.stroke();
-    const v1 = [L(a[0], b[0], .5), L(a[1], d[1], .12)];
-    c.fillStyle = 'rgba(20,50,55,.45)';
-    for (let k = 0; k < 3; k++) { const yy = L(a[1], d[1], .1 + k * .035), xx0 = L(a[0], b[0], .25), xx1 = L(a[0], b[0], .75); c.fillRect(xx0, yy, (xx1 - xx0), Math.max(1, (d[1] - a[1]) * .012)); }
-    const hy = L(a[1], d[1], .5); c.fillRect(L(a[0], b[0], .78), hy, Math.max(1.5, (b[0] - a[0]) * -.06), (d[1] - a[1]) * .07);
-    void v1;
-  }
-  // ceiling lights
-  for (let i = 0; i < 7; i++) {
-    const t0 = dz(i + .3, 7), t1 = dz(i + .7, 7);
-    const a = pt(w * .42, 0, L(far.l, far.r, .42), far.t, t0), b = pt(w * .58, 0, L(far.l, far.r, .58), far.t, t0);
-    const cc = pt(w * .58, 0, L(far.l, far.r, .58), far.t, t1), d = pt(w * .42, 0, L(far.l, far.r, .42), far.t, t1);
-    quad([a, b, cc, d], '#fffdf7');
-  }
-  // baseboards
-  c.strokeStyle = 'rgba(90,55,45,.5)'; c.lineWidth = Math.max(2, w * .004);
-  c.beginPath(); c.moveTo(0, h); c.lineTo(far.l, far.b); c.moveTo(w, h); c.lineTo(far.r, far.b); c.stroke();
-  // warm vignette
-  g = c.createRadialGradient(vx, vy, h * .2, vx, vy, w * .75); g.addColorStop(0, 'rgba(255,170,150,0)'); g.addColorStop(1, 'rgba(70,30,60,.35)');
-  c.fillStyle = g; c.fillRect(0, 0, w, h);
-}
-
-/* ---------- audio ---------- */
-let ac = null, muted = false;
-try { muted = localStorage.getItem('galtype-muted') === '1'; } catch (e) {}
-function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (ac && ac.state === 'suspended') ac.resume(); }
-function tone(freq, dur, type = 'square', vol = .05, when = 0, slide = 0) {
-  if (muted || !ac) return;
-  const t = ac.currentTime + when, o = ac.createOscillator(), gn = ac.createGain();
-  o.type = type; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur);
-  gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(gn).connect(ac.destination); o.start(t); o.stop(t + dur + .02);
-}
-const sfx = {
-  key: () => tone(1100 + Math.random() * 200, .04, 'square', .025),
-  bad: () => tone(160, .14, 'sawtooth', .05, 0, 90),
-  clear: () => { [660, 880, 1320].forEach((f, i) => tone(f, .1, 'triangle', .06, i * .05)); },
-  hit: () => { tone(520, .35, 'sawtooth', .05, 0, 120); tone(260, .4, 'square', .03, .05, 80); },
-  boss: () => { [330, 330, 440, 523].forEach((f, i) => tone(f, .16, 'square', .045, i * .14)); },
-  win: () => { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, .16, 'triangle', .07, i * .11)); },
-  lose: () => { [440, 349, 294, 220].forEach((f, i) => tone(f, .22, 'triangle', .06, i * .16)); }
-};
-
-/* ---------- state ---------- */
-let girls = [], target = null, running = false, paused = false, phase = 'title';
-let t = 0, last = 0, waveIdx = 0, boss = null, wobbleT = 0;
-let score = 0, combo = 0, bestCombo = 0, composure = 100, hearts = 3;
-let goodKeys = 0, badKeys = 0, startTime = 0, playTime = 0, defused = 0;
-let uid = 0;
-let WAVE = [];
-
-function newGame() {
-  for (const g of girls) g.el.remove(), g.bub.remove();
-  girls = []; target = null; boss = null;
-  WAVE = WAVE_BASE.map(w => w.slice());
-  t = 0; waveIdx = 0; score = 0; combo = 0; bestCombo = 0; composure = 100; hearts = 3;
-  goodKeys = 0; badKeys = 0; playTime = 0; defused = 0; wobbleT = 0;
-  stage.classList.remove('wobble');
-  $('stagebar').textContent = 'Animation demo · Hana';
-  renderHud(); echo();
-  phase = 'wave'; running = true; paused = false;
-  $('title').hidden = true; $('results').hidden = true; $('pause').hidden = true; $('hud').hidden = false;
-  banner('Hana demo', 'Type her word before she strikes', 1800);
-  t = -1.6; last = performance.now();
-  focusKbd();
-  requestAnimationFrame(loop);
-}
-
-function pickWord(c) {
-  const used = new Set(girls.filter(live).map(g => g.word[0]));
-  const recent = new Set(girls.map(g => g.word));
-  const pool = CAST[c].words.filter(w => !used.has(w[0]) && !recent.has(w));
-  const list = pool.length ? pool : CAST[c].words.filter(w => !used.has(w[0]));
-  if (!list.length) return null;
-  return list[Math.floor(Math.random() * list.length)];
-}
-
-function spawn(c) {
-  const word = pickWord(c); if (!word) return false;
-  const free = LANES.filter(l => !girls.some(g => live(g) && Math.abs(g.lane - l) < .1));
-  const lane = (free.length ? free : LANES)[Math.floor(Math.random() * (free.length || LANES.length))];
-  const g = mkGirl(c, word, lane);
-  g.dur = CAST[c].dur * (1 - Math.min(.25, t / 160));
-  girls.push(g); renderBubble(g); return true;
-}
-
-function mkGirl(c, word, lane) {
-  const el = document.createElement('div'); el.className = 'girl';
-  el.innerHTML = `<div class="shadow"></div><img alt="" src="${SPR(c, 'walk1')}">`;
-  const bub = document.createElement('div'); bub.className = 'bubble';
-  actors.append(el, bub);
-  return { id: ++uid, c, word, typed: 0, lane, p: 0, dur: 10, boost: 0, state: 'walk', el, bub, img: el.querySelector('img'), face: 'walk1', animT: Math.random() * STEP_TIME * 2, frontT: 0, fadeT: Math.random() * 6, outT: 0, line: 0 };
-}
-
-function setFace(g, face) { if (g.face !== face) { g.face = face; g.img.src = SPR(g.c, face); g.img.style.height = ((FRAME_H[face] || 1) * 100) + '%'; } }
-const live = (g) => g.state === 'walk' || g.state === 'front';
-
-function place(g) {
-  g.el.classList.toggle('close', !!g.close);
-  if (g.close) {
-    // close-up: half-body frame anchored to the bottom of the screen, a quick zoom-in when she arrives
-    const t = g.state === 'hit' ? 1 + g.outT * .5 : Math.min(1, .8 + g.frontT * 1.6);
-    const sh = H * .84 * t, x = W / 2 + g.lane * W * .41, y0 = H - sh;
-    g.el.style.height = sh + 'px';
-    g.el.style.transform = `translate(${x}px, ${y0}px)`;
-    g.el.style.zIndex = 1500;
-    g.bub.style.zIndex = 4000;
-    const bw = g.bub.offsetWidth || 0;
-    g.bub.style.left = Math.max(bw / 2 + W * .01, Math.min(W - bw / 2 - W * .01, x)) + 'px';
-    g.bub.style.top = Math.max(H * .15, y0 + H * .01) + 'px';
-    return;
-  }
-  const e = g.p, ease = e * e * .35 + e * .65;
-  const footY = H * HZ + (H * 1.02 - H * HZ) * ease;
-  const scale = .2 + .82 * ease;
-  const x = W / 2 + g.lane * W * (.07 + .34 * ease);
-  let hop = 0;
-  if (g.state === 'walk' && g.face === 'walk2') hop = H * .008 * scale;
-  const sh = H * .86 * scale;
-  g.el.style.height = sh + 'px'; g.el.style.width = sh * .6 + 'px';
-  g.el.style.transform = `translate(${x}px, ${footY - sh - hop}px)`;
-  g.el.style.zIndex = Math.round(g.p * 1000);
-  g.bub.style.zIndex = 2000 + Math.round(g.p * 1000) + (g === target ? 1000 : 0);
-  const imgTop = footY - sh * .99 - hop;
-  const by = Math.max(H * .17, imgTop - H * .012);
-  let bx = x;
-  const bw = g.bub.offsetWidth || 0;
-  bx = Math.max(bw / 2 + W * .01, Math.min(W - bw / 2 - W * .01, bx));
-  g.bub.style.left = bx + 'px'; g.bub.style.top = by + 'px';
-}
-
-function renderBubble(g) {
-  const w = g.word, i = g.typed;
-  const esc = (s) => s.split('').map(ch => ch === ' ' ? '<span class="sp"> </span>' : `<span>${ch}</span>`).join('');
-  const done = w.slice(0, i), cur = w.slice(i, i + 1), rest = w.slice(i + 1);
-  const curHtml = cur === ' ' ? '<span class="cur sp">&nbsp;</span>' : `<span class="cur">${cur}</span>`;
-  const label = g.c === 'kaede' ? `Kaede · line ${g.line + 1} of ${CAST.kaede.lines.length}` : CAST[g.c].name;
-  g.bub.innerHTML = `<span class="name">${label}</span><span class="done">${esc(done).replace(/class="sp"/g, 'class="done sp"')}</span>${cur ? curHtml : ''}<span class="rest">${esc(rest)}</span>`;
-  g.bub.classList.toggle('target', g === target);
-  g.bub.classList.toggle('boss', g.c === 'kaede');
-}
-
-/* ---------- HUD ---------- */
-const HEART = '<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.5 3 5 6.4 5c2.1 0 3.5 1.2 4.3 2.4l1.3 1.8 1.3-1.8C14.1 6.2 15.5 5 17.6 5 21 5 23.1 8.5 21.6 11.8 19.5 16.4 12 21 12 21z" fill="#ff5c97" stroke="#fff" stroke-width="1.6"/></svg>';
-function renderHud() {
-  $('score').textContent = score.toLocaleString();
-  const cb = $('combo'); cb.textContent = combo >= 3 ? `Combo ×${combo}` : '';
-  const bar = $('bar'); bar.querySelector('i').style.width = Math.max(0, composure) + '%'; bar.classList.toggle('low', composure < 35);
-  $('hearts').innerHTML = [0, 1, 2].map(i => `<span class="${i < hearts ? '' : 'lost'}">${HEART}</span>`).join('');
-}
-function bumpCombo() { const cb = $('combo'); cb.classList.remove('pop'); void cb.offsetWidth; cb.classList.add('pop'); }
-function echo() {
-  const e = $('echo');
-  if (target) { const s = target.word.slice(0, target.typed); e.innerHTML = s.replace(/ /g, '&nbsp;') + '<span class="caret"></span>'; }
-  else e.innerHTML = '<span class="caret"></span>';
-}
-let bannerTimer = 0;
-function banner(big, small, ms) {
-  const b = $('banner'); b.innerHTML = `<div class="big">${big}</div>${small ? `<div class="small">${small}</div>` : ''}`;
-  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); b.hidden = false;
-  clearTimeout(bannerTimer); bannerTimer = setTimeout(() => { b.hidden = true; }, ms);
-}
-function floatText(x, y, text, bad) {
-  const f = document.createElement('div'); f.className = 'float' + (bad ? ' bad' : ''); f.textContent = text;
-  f.style.left = x + 'px'; f.style.top = y + 'px'; f.style.zIndex = 5000; actors.append(f);
-  setTimeout(() => f.remove(), 950);
-}
-function flash() { const f = $('flash'); f.style.transition = 'none'; f.style.opacity = '.45'; requestAnimationFrame(() => { f.style.transition = 'opacity .45s'; f.style.opacity = '0'; }); }
-
-/* ---------- typing ---------- */
-function typeChar(ch) {
-  if (phase !== 'wave' && phase !== 'boss') return;
-  if (paused || t < 0) return;
-  if (!target) {
-    const cands = girls.filter(g => live(g) && g.typed === 0 && g.word[0] === ch);
-    if (!cands.length) { miss(null); return; }
-    cands.sort((a, b) => b.p - a.p);
-    target = cands[0];
-    girls.forEach(renderBubble);
-  }
-  if (target.word[target.typed] === ch) {
-    target.typed++; goodKeys++; combo++; bestCombo = Math.max(bestCombo, combo);
-    score += 10 + Math.min(combo, 50);
-    if (combo % 10 === 0) bumpCombo();
-    sfx.key();
-    if (target.typed >= target.word.length) finishWord(target);
-    else renderBubble(target);
-  } else miss(target);
-  renderHud(); echo();
-}
-
-function miss(g) {
-  badKeys++; combo = 0; sfx.bad();
-  composure -= g ? 9 : 5;
-  if (g) { g.boost = 1.2; g.bub.classList.remove('shake'); void g.bub.offsetWidth; g.bub.classList.add('shake'); }
-  if (composure <= 0) { composure = 40; wobbleT = 4; stage.classList.add('wobble'); banner('Flustered!', 'Letters won’t sit still', 1400); }
-  renderHud();
-}
-
-function finishWord(g) {
-  defused++;
-  const bonus = 60 + Math.round((1 - g.p) * 140) + g.word.length * 8;
-  score += bonus; composure = Math.min(100, composure + 6);
-  const r = g.bub.getBoundingClientRect(), s = stage.getBoundingClientRect();
-  floatText(r.left - s.left + r.width / 2, r.top - s.top, '+' + bonus);
-  target = null;
-  if (g.c === 'kaede') { bossLine(g); return; }
-  g.state = 'out'; g.outT = 0; g.close = false; setFace(g, 'defeated'); g.bub.style.opacity = '0'; g.bub.classList.remove('danger');
-  sfx.clear();
-}
-
-function dropTarget() { if (target) { target.typed = 0; renderBubble(target); } target = null; echo(); }
-
-/* ---------- boss ---------- */
-function startBoss() {
-  phase = 'boss';
-  $('stagebar').textContent = 'Boss · Kaede, festival committee chair';
-  banner('Boss!', 'Kaede, festival committee chair', 2200); sfx.boss();
-  const g = mkGirl('kaede', CAST.kaede.lines[0], 0); g.line = 0; g.p = .05; g.dur = 30; g.boss = true;
-  boss = g; girls.push(g); renderBubble(g);
-  bossDelay = 2.2;
-}
-let bossDelay = 0;
-function bossLine(g) {
-  g.line++;
-  if (g.line >= CAST.kaede.lines.length) {
-    g.state = 'out'; g.outT = 0; setFace(g, 'defeated'); g.bub.style.opacity = '0'; sfx.win();
-    setTimeout(() => endGame(true), 1600); phase = 'end'; return;
-  }
-  sfx.clear();
-  g.word = CAST.kaede.lines[g.line]; g.typed = 0; g.p = Math.max(.05, g.p - .14);
-  g.dur = 30 - g.line * 4.5; setFace(g, 'normal'); renderBubble(g);
-}
-
-/* ---------- loop ---------- */
-function loop(now) {
-  if (!running) return;
-  const dt = Math.min(.05, (now - last) / 1000); last = now;
-  if (!paused) step(dt * timeScale);
-  requestAnimationFrame(loop);
-}
-
-function step(dt) {
-  t += dt; if (t > 0 && phase !== 'end') playTime += dt;
-  if (wobbleT > 0) { wobbleT -= dt; if (wobbleT <= 0) stage.classList.remove('wobble'); }
-  if (phase === 'wave') {
-    while (waveIdx < WAVE.length && t >= WAVE[waveIdx][1]) {
-      if (girls.filter(live).length >= 4) { WAVE[waveIdx][1] += .5; break; }
-      if (spawn(WAVE[waveIdx][0])) waveIdx++; else { WAVE[waveIdx][1] += .4; break; }
-    }
-    if (waveIdx >= WAVE.length && !girls.length) { phase = 'end'; sfx.win(); banner('Demo clear', '', 1200); setTimeout(() => endGame(true), 1300); }
-  }
-  if (bossDelay > 0) bossDelay -= dt;
-  for (const g of girls.slice()) {
-    if (g.state === 'walk') {
-      if (g.boss && bossDelay > 0) { place(g); continue; }
-      const mul = 1 + (g.boost > 0 ? .9 : 0);
-      g.boost = Math.max(0, g.boost - dt);
-      g.p += dt / g.dur * mul;
-      if (CAST[g.c].fade) { g.fadeT += dt; const o = .5 + .5 * Math.sin(g.fadeT * 2.4); g.bub.style.opacity = String(Math.max(g === target ? .35 : .08, o)); }
-      g.animT += dt * mul;
-      setFace(g, Math.floor(g.animT / STEP_TIME) % 2 ? 'walk2' : 'walk1');
-      if (g.p >= 1) { g.p = 1; g.state = 'front'; g.frontT = 0; g.close = true; setFace(g, 'flustered'); g.bub.classList.add('danger'); }
-    } else if (g.state === 'front') {
-      g.frontT += dt;
-      g.bub.style.setProperty('--fuse', String(Math.max(0, 1 - g.frontT / FRONT_HOLD)));
-      if (g.frontT >= FRONT_HOLD) { hitBy(g); continue; }
-    } else if (g.state === 'out') {
-      g.outT += dt; if (g.outT > .7) g.p -= dt * .12;
-      g.el.style.opacity = String(Math.max(0, 1 - Math.max(0, g.outT - .7) / .6));
-      if (g.outT > 1.3) { g.el.remove(); g.bub.remove(); girls.splice(girls.indexOf(g), 1); continue; }
-    } else if (g.state === 'hit') {
-      g.outT += dt; g.p = 1 + g.outT * .25;
-      g.el.style.opacity = String(Math.max(0, 1 - g.outT / .7)); g.bub.style.opacity = '0';
-      if (g.outT > .7) { g.el.remove(); g.bub.remove(); girls.splice(girls.indexOf(g), 1); continue; }
-    }
-    place(g);
-  }
-}
-
-function hitBy(g) {
-  hearts--; combo = 0; composure = Math.max(0, composure - 20); flash(); sfx.hit();
-  floatText(W / 2, H * .55, g.c === 'kaede' ? 'Hmph. Again!' : 'Too slow!', true);
-  if (target === g) target = null;
-  if (g.c === 'kaede') { g.p = .35; g.typed = 0; renderBubble(g); }
-  else { g.state = 'hit'; g.outT = 0; g.bub.classList.remove('danger'); }
-  renderHud(); echo();
-  if (hearts <= 0) { phase = 'end'; sfx.lose(); setTimeout(() => endGame(false), 900); }
-}
-
-function endGame(won) {
-  running = false; phase = 'results';
-  const mins = Math.max(playTime, 1) / 60;
-  const wpm = Math.round(goodKeys / 5 / mins);
-  const acc = goodKeys + badKeys ? Math.round(goodKeys / (goodKeys + badKeys) * 100) : 0;
-  let grade = 'C';
-  if (won) grade = acc >= 96 && hearts === 3 ? 'S' : acc >= 90 && hearts >= 2 ? 'A' : 'B';
-  $('rtitle').textContent = won ? 'Demo clear' : 'Hana got you';
-  $('grade').textContent = won ? grade : '—';
-  $('rscore').textContent = score.toLocaleString(); $('rwpm').textContent = wpm;
-  $('racc').textContent = acc + '%'; $('rcombo').textContent = bestCombo;
-  $('results').hidden = false; $('hud').hidden = true;
-  try { const best = +localStorage.getItem('galtype-best') || 0; if (score > best) localStorage.setItem('galtype-best', String(score)); } catch (e) {}
-}
-
-function setPause(p) {
-  if (phase !== 'wave' && phase !== 'boss') return;
-  paused = p; $('pause').hidden = !p; if (!p) { last = performance.now(); focusKbd(); }
-}
-
-/* ---------- input ---------- */
-const kbd = $('kbd');
-function focusKbd() { try { kbd.focus({ preventScroll: true }); } catch (e) {} }
-document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (phase === 'title' || phase === 'results') {
-    if (e.key === 'Enter') { e.preventDefault(); audio(); newGame(); }
-    return;
-  }
-  if (e.key === 'Escape') { e.preventDefault(); setPause(!paused); return; }
-  if (paused) { if (e.key === 'Enter') setPause(false); return; }
-  if (e.key === 'Backspace') { e.preventDefault(); dropTarget(); return; }
-  if (e.key.length === 1) {
-    e.preventDefault();
-    const ch = e.key.toLowerCase();
-    if (/^[a-z ]$/.test(ch)) typeChar(ch);
-  }
-});
-// phones / tablets: on-screen keyboard sends input events instead of keydown keys
-kbd.addEventListener('input', () => { const v = kbd.value; kbd.value = ''; for (const ch of v.toLowerCase()) if (/^[a-z ]$/.test(ch)) typeChar(ch); });
-stage.addEventListener('pointerdown', (e) => { if (!e.target.closest('button')) focusKbd(); });
-$('start').addEventListener('click', () => { audio(); newGame(); });
-$('again').addEventListener('click', () => { audio(); newGame(); });
-$('resume').addEventListener('click', () => setPause(false));
-const slowBtn = $('slow');
-slowBtn.addEventListener('click', () => { timeScale = timeScale === 1 ? .35 : 1; slowBtn.setAttribute('aria-pressed', String(timeScale !== 1)); slowBtn.textContent = timeScale === 1 ? 'Slow motion' : 'Slow motion on'; focusKbd(); });
-const muteBtn = $('mute');
-function syncMute() { muteBtn.textContent = muted ? 'Sound off' : 'Sound on'; muteBtn.setAttribute('aria-pressed', String(!muted)); }
-muteBtn.addEventListener('click', () => { muted = !muted; try { localStorage.setItem('galtype-muted', muted ? '1' : '0'); } catch (e) {} syncMute(); audio(); focusKbd(); });
-syncMute();
-document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
-window.addEventListener('resize', fit);
-fit(); renderHud();
-})();
-</script>
+<script src="assets/sprites/meta.js"></script>
+<script src="game.js"></script>
 </body>
 </html>
