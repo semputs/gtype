@@ -1,34 +1,25 @@
-# GalType 3D
+# GalType (gtype)
 
-A 3D version of GalType: girls walk down a school hallway toward you, each with a line in a speech bubble. Type it before she reaches you.
+Claude's version of GalType, a typing game where hypnotized students run at you with love confessions and you type their lines to snap them out of it. See the design doc for the full plan (5 stages, bosses, story).
 
 **Play:** https://semput.com/gtype/
 
-## How to play
-- Type the word in a girl's speech bubble. Your first letter locks onto her; finish the word and she turns and walks off.
-- Typos break your combo, drain **Composure**, and make that girl hurry. Hit zero composure and the letters start wobbling.
-- If a girl reaches you, you lose a heart. Three hearts per run.
-- `Backspace` drops your current target · `Esc` pauses.
+## Current build: Hana animation demo
+A 2D test of the sprite animation, with Hana only:
+- **Run 1 / Run 2:** two frames that alternate while she runs toward you (`STEP_TIME`, 0.16 s per frame).
+- **Flustered:** when she reaches you she stops in front of you, flustered, for 1.6 s (`FRONT_HOLD`). Her bubble turns red with a draining fuse. You can still type her word to save yourself.
+- **Defeated:** shown whenever you finish her word, whether she's still running or already in front of you.
+- **Slow motion** button (bottom left) plays the demo at 35% speed so you can inspect the frames.
 
-| | Style | Look |
-|---|---|---|
-| **Hana** | short, fast words; she runs | orange hair with buns, coral top |
-| **Mio** | her text fades in and out | grey hair, teal beret, mint top |
-| **Rei** | long words; slow walk | navy hair, glasses, lavender top |
-| **Kaede** (boss) | four full sentences, faster each line | wine-red hair, pink top, gold armband |
+## Files
+- `index.html` — the whole game, no build step.
+- `assets/sprites/hana_walk1.png`, `hana_walk2.png`, `hana_flustered.png`, `hana_defeated.png` — transparent PNGs on a shared 574×760 canvas (same scale, feet on the bottom edge, body centred) so the frames swap without jumping.
 
-## How it's built
-- `index.html` is the whole game (HTML, CSS, JavaScript). No build step.
-- 3D: [three.js](https://threejs.org) r180 and [three-vrm](https://github.com/pixiv/three-vrm) (pixiv), both MIT licensed, vendored in `lib/` so the game has no outside dependencies except Google Fonts.
-- All four characters share one base model (`assets/base.vrm`). The game recolours hair, top, shorts and eyes per character at load time and adds a small accessory (buns, beret, glasses, armband). Walking, running and poses are animated in code; faces use the model's built-in VRM expressions (normal, flustered = surprised, defeated = sad).
-- The hallway is built from simple shapes and canvas-drawn textures in code.
+Sprites were generated in ComfyUI (Animagine XL 4.0, 832×1216, 28 steps, CFG 5, euler_ancestral; both run frames share one seed) and cut out with an OpenCV flood-fill script.
 
-## Credits
-- Base 3D model: "VRM1_Constraint_Twist_Sample" © 2022 pixiv Inc., from the VRM Consortium's official samples (github.com/vrm-c/vrm-specification), under the VRM Public License 1.0. Its licence allows modification and redistribution, including commercial use, with no credit required (credited anyway). Textures were downscaled to 1024px for faster loading.
-- three.js © three.js authors (MIT) · three-vrm © pixiv Inc. (MIT).
+## Branches
+- `main` — the 2D game (this demo for now).
+- `3d` — the parked three.js/VRM version.
 
 ## Hosting
-Static files only. Serve the folder as-is at `/gtype/`. The server should send `.vrm` files with any binary content type (for example `application/octet-stream`).
-
-## Swapping in your own characters later
-Make a character in VRoid Studio, export it as `.vrm`, and the loader can take it in place of `base.vrm` (one file per character would need a small code change in `loadPool()` and `dress()`).
+Static files. Serve the folder as-is at `/gtype/`; updating is a `git pull`.
