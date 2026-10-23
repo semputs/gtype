@@ -137,7 +137,7 @@ function mkGirl(c, word, lane) {
   el.innerHTML = `<div class="shadow"></div><img alt="" src="${SPR(c, 'walk1')}">`;
   const bub = document.createElement('div'); bub.className = 'bubble';
   actors.append(el, bub);
-  return { id: ++uid, c, word, typed: 0, lane, p: 0, dur: 10, boost: 0, state: 'walk', el, bub, img: el.querySelector('img'), face: '', animT: Math.random() * .6, frontT: 0, fadeT: Math.random() * 6, outT: 0, line: 0 };
+  return { id: ++uid, c, word, typed: 0, lane, p: 0, dur: 10, boost: 0, state: 'walk', el, bub, img: el.querySelector('img'), shadow: el.querySelector('.shadow'), face: '', animT: Math.random() * .6, frontT: 0, fadeT: Math.random() * 6, outT: 0, line: 0 };
 }
 function setFace(g, face) {
   if (g.face === face) return;
@@ -151,22 +151,24 @@ function place(g) {
   g.el.classList.toggle('close', !!g.close);
   if (g.close) {
     const k = g.state === 'hit' ? 1 + g.outT * .5 : Math.min(1, .8 + g.frontT * 1.6);
-    const sh = H * .84 * k, x = W / 2 + g.lane * W * .41, y0 = H - sh;
-    g.el.style.height = sh + 'px'; g.el.style.transform = `translate(${x}px, ${y0}px)`;
+    const sh = H * .84 * k, x = W / 2 + g.lane * W * .41 + (g.dx || 0) * W, y0 = H - sh + (g.bob || 0) * H;
+    g.el.style.height = sh + 'px'; g.el.style.transform = `translate(${x}px, ${y0}px) rotate(${g.rot || 0}deg)`;
     g.el.style.zIndex = 1500; g.bub.style.zIndex = 4000;
     const bw = g.bub.offsetWidth || 0;
     g.bub.style.left = Math.max(bw / 2 + W * .01, Math.min(W - bw / 2 - W * .01, x)) + 'px';
-    g.bub.style.top = Math.max(H * .15, y0 + H * .01) + 'px';
+    g.bub.style.top = Math.max(H * .1 + (g.bub.offsetHeight || 0), y0 + H * .01) + 'px'; // keep clear of the stage label
     return;
   }
   const hz = HZ(), e = Math.max(0, g.p), ease = e * e * .35 + e * .65;
   const footY = H * hz + (H * 1.02 - H * hz) * ease;
   const scale = (.2 + .82 * ease) * (CAST[g.c].size || 1);
-  const x = W / 2 + g.lane * W * (.16 + .26 * ease);
-  const hop = g.state === 'walk' && g.face === 'walk2' ? H * .008 * scale * (CAST[g.c].hop || 0) : 0;
+  const x = W / 2 + g.lane * W * (.16 + .26 * ease) + (g.dx || 0) * W;
+  const lift = (g.lift || 0) * H * scale;
+  const hop = (g.state === 'walk' && g.face === 'walk2' ? H * .008 * scale * (CAST[g.c].hop || 0) : 0) + lift;
   const sh = H * .86 * scale;
   g.el.style.height = sh + 'px'; g.el.style.width = sh * .6 + 'px';
-  g.el.style.transform = `translate(${x}px, ${footY - sh - hop}px)`;
+  g.el.style.transform = `translate(${x}px, ${footY - sh - hop}px) rotate(${g.rot || 0}deg)`;
+  if (g.shadow) g.shadow.style.transform = `translate(-50%, ${lift}px) scale(${Math.max(.55, 1 - lift / (sh * .25))})`;
   g.el.style.zIndex = Math.round(g.p * 1000);
   g.bub.style.zIndex = 2000 + Math.round(g.p * 1000) + (g === target ? 1000 : 0);
   const top = META[g.c] && META[g.c].top && META[g.c].top[g.face] || .99;
@@ -250,41 +252,59 @@ function finishWord(g) {
 function defeat(g) { g.state = 'out'; g.outT = 0; g.close = false; setFace(g, 'defeated'); g.bub.style.opacity = '0'; g.bub.classList.remove('danger'); }
 function dropTarget() { if (target) { target.typed = 0; renderBubble(target); } target = null; echo(); }
 
-/* ---------- bosses: she stands and talks; every finished line (or a line you run out of time on) she dashes closer ---------- */
-const BOSS_STEPS = [.25, .42, .58, .74, .9];
-function lineTime(g) { return (2.2 + g.word.length * .3) * (1 - g.line * .06) * (stageIdx ? .9 : 1); }
+/* ---------- bosses ----------
+   She hovers at a distance and talks. Every finished line, or a line you run out of time on, she dashes a step closer.
+   Her last two lines she delivers right in your face (flustered close-up); running out of time there costs a heart
+   and knocks her back down the hall. */
+const BOSS_STEPS = [.25, .45, .68];
+const BOSS_GLOW = { kaede: '255,110,160', akira: '255,200,40' };
+function lineTime(g) { return (2.2 + g.word.length * .3) * (1 - g.line * .06) * (stageIdx ? .9 : 1) * (g.close ? 1.15 : 1); }
 function startBoss() {
   const s = STAGES[stageIdx], c = s.boss, cfg = CAST[c];
   phase = 'boss';
   $('stagebar').textContent = `Boss · ${cfg.name}`;
   banner('Boss!', `${cfg.name} · ${cfg.title}`, 2200); sfx.boss();
   const g = mkGirl(c, cfg.lines[0], 0); g.boss = true; g.line = 0; g.k = 0; g.p = -.2; g.from = -.2; g.to = BOSS_STEPS[0];
-  g.dashT = .6; g.dashLen = .6; g.entering = true; g.lineT = 0; g.delay = 2.2;
+  g.dashT = .6; g.dashLen = .6; g.entering = true; g.lineT = 0; g.delay = 2.2; g.hoverT = 0; g.ghostT = 0;
+  g.el.classList.add('boss'); g.el.style.setProperty('--glow', BOSS_GLOW[c] || '255,255,255');
   boss = g; girls.push(g); renderBubble(g); setFace(g, 'walk2');
   $('btimer').hidden = false;
 }
 function bossDash(g, k) {
-  g.k = Math.min(k, BOSS_STEPS.length - 1); g.from = g.p; g.to = BOSS_STEPS[g.k];
+  if (k >= BOSS_STEPS.length) { bossClose(g); return; }
+  g.k = k; g.from = g.p; g.to = BOSS_STEPS[k];
   g.dashT = .35; g.dashLen = .35; setFace(g, 'walk2'); sfx.dash();
+}
+function bossClose(g) {
+  // lunge into a close-up: she's right in front of you, flustered, for the rest of her lines
+  g.close = true; g.frontT = 0; g.dashT = 0; g.k = BOSS_STEPS.length; g.p = 1;
+  setFace(g, 'flustered'); g.bub.classList.add('danger'); sfx.dash(); flash();
 }
 function bossLine(g) {
   const cfg = CAST[g.c];
-  g.line++; g.state = 'walk'; g.close = false; g.bub.classList.remove('danger');
+  g.line++;
   if (g.line >= cfg.lines.length) {
+    g.close = false; g.p = .9; g.dx = 0; g.rot = 0; g.lift = 0; g.bob = 0;
     defeat(g); g.outHold = 2.2; sfx.win(); $('btimer').hidden = true; phase = 'end';
     setTimeout(() => stageIdx + 1 < STAGES.length ? stageClear() : endGame(true), 2000);
     return;
   }
   sfx.clear();
   g.word = cfg.lines[g.line]; g.typed = 0; g.lineT = 0; renderBubble(g);
-  bossDash(g, g.k + 1);
+  if (g.close) return; // already in your face: stay there
+  if (cfg.lines.length - g.line <= 2) bossClose(g); else bossDash(g, g.k + 1);
 }
 function bossTimeout(g) {
   if (target === g) target = null;
   g.typed = 0; g.lineT = 0; renderBubble(g); echo();
-  if (g.k >= BOSS_STEPS.length - 1) { // already right in front of you: she gets you
-    g.close = true; g.state = 'front'; g.frontT = FRONT_HOLD - .6; setFace(g, 'flustered'); g.bub.classList.add('danger');
-  } else { floatText(W / 2, H * .5, 'Too slow!', true); combo = 0; composure = Math.max(0, composure - 12); renderHud(); bossDash(g, g.k + 1); }
+  if (g.close) { hitBy(g); return; }
+  floatText(W / 2, H * .5, 'Too slow!', true); combo = 0; composure = Math.max(0, composure - 12); renderHud();
+  bossDash(g, g.k + 1);
+}
+function ghost(g) {
+  // afterimage left behind while she dashes
+  const gh = g.el.cloneNode(true); gh.classList.add('ghost'); gh.style.zIndex = String(Math.max(0, (+g.el.style.zIndex || 0) - 1));
+  actors.append(gh); setTimeout(() => gh.remove(), 380);
 }
 function stageClear() {
   phase = 'between'; banner('Stage clear!', 'Next: ' + STAGES[stageIdx + 1].label.split(' · ')[1], 2400);
@@ -337,23 +357,31 @@ function step(dt) {
   }
 }
 function stepBoss(g, dt) {
+  g.hoverT += dt; const T = g.hoverT, cl = g.close;
+  // idle motion: float above the floor, drift across the hall, sway; tighter and jumpier in the close-up
+  g.lift = cl ? 0 : .035 + .025 * Math.sin(T * 2.3);
+  g.dx = cl ? .015 * Math.sin(T * 3.1) : .09 * Math.sin(T * .8) + .02 * Math.sin(T * 2.7);
+  g.rot = cl ? 1.2 * Math.sin(T * 4.3) : 3 * Math.sin(T * 1.6);
+  g.bob = cl ? .012 * Math.sin(T * 5.2) : 0;
   if (g.dashT > 0) {
     g.dashT -= dt; const k = 1 - Math.max(0, g.dashT) / g.dashLen, e = 1 - (1 - k) * (1 - k);
-    g.p = g.from + (g.to - g.from) * e;
+    g.p = g.from + (g.to - g.from) * e; g.rot = 6 * Math.sin(k * Math.PI);
+    g.ghostT -= dt; if (g.ghostT <= 0) { ghost(g); g.ghostT = .05; }
     if (g.dashT <= 0) { g.entering = false; setFace(g, 'walk1'); }
     return;
   }
-  setFace(g, 'walk1');
+  if (cl) { g.frontT += dt; setFace(g, 'flustered'); } else setFace(g, 'walk1');
   if (g.delay > 0) { g.delay -= dt; $('btimer').firstElementChild.style.transform = 'scaleX(1)'; return; }
   g.lineT += dt; const lim = lineTime(g), left = Math.max(0, 1 - g.lineT / lim);
   const bt = $('btimer'); bt.firstElementChild.style.transform = `scaleX(${left})`; bt.classList.toggle('low', left < .3);
+  if (cl) g.bub.style.setProperty('--fuse', String(left));
   if (g.lineT >= lim) bossTimeout(g);
 }
 function hitBy(g) {
   hearts--; combo = 0; composure = Math.max(0, composure - 20); flash(); sfx.hit();
   floatText(W / 2, H * .55, g.boss ? 'Gotcha!' : 'Too slow!', true);
   if (target === g) target = null;
-  if (g.boss) { g.close = false; g.state = 'walk'; g.bub.classList.remove('danger'); g.p = .9; g.lineT = 0; g.typed = 0; renderBubble(g); bossDash(g, 2); g.from = .9; }
+  if (g.boss) { g.close = false; g.state = 'walk'; g.bub.classList.remove('danger'); g.p = .9; g.lineT = 0; g.typed = 0; renderBubble(g); bossDash(g, 1); }
   else { g.state = 'hit'; g.outT = 0; g.bub.classList.remove('danger'); }
   renderHud(); echo();
   if (hearts <= 0) { phase = 'end'; sfx.lose(); setTimeout(() => endGame(false), 900); }

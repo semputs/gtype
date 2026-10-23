@@ -46,6 +46,11 @@ body {
 .girl { position: absolute; left: 0; top: 0; transform-origin: 50% 100%; will-change: transform; pointer-events: none; }
 .girl img { display: block; height: 100%; width: auto; transform: translateX(-50%); position: absolute; left: 0; bottom: 0; filter: drop-shadow(0 0 1px rgba(40,20,60,.35)); }
 .girl.close .shadow { display: none; }
+.girl.boss img { filter: drop-shadow(0 0 1px rgba(40,20,60,.35)) drop-shadow(0 0 calc(var(--u) * .9) rgba(var(--glow), .75)); animation: aura 1.1s ease-in-out infinite alternate; }
+@keyframes aura { to { filter: drop-shadow(0 0 1px rgba(40,20,60,.35)) drop-shadow(0 0 calc(var(--u) * 1.8) rgba(var(--glow), .95)); } }
+.girl.ghost { pointer-events: none; animation: ghost .38s ease-out forwards; }
+.girl.ghost .shadow { display: none; }
+@keyframes ghost { from { opacity: .45; } to { opacity: 0; } }
 .girl .shadow { position: absolute; left: 0; bottom: -2%; width: 70%; height: 5%; transform: translateX(-50%); border-radius: 50%; background: rgba(40,20,50,.28); }
 .bubble {
   position: absolute; transform: translate(-50%, -100%); white-space: nowrap;
@@ -147,6 +152,7 @@ body {
 .result-title { font-family: var(--f-display); font-size: calc(var(--u) * 3.4); color: #fff; margin: 0; }
 #kbd { position: absolute; opacity: 0; width: 1px; height: 1px; left: 50%; top: 50%; border: 0; padding: 0; }
 @media (prefers-reduced-motion: reduce) {
+  .girl.boss img { animation: none; }
   .bubble.danger { animation: none; }
   #stage.wobble #actors, #stage.wobble .bubble span:not(.name), .combo.pop, .bubble.shake, #banner.show { animation: none !important; }
 }
