@@ -150,7 +150,7 @@ const live = (g) => g.state === 'walk' || g.state === 'front';
 function place(g) {
   g.el.classList.toggle('close', !!g.close);
   if (g.close) {
-    const k = g.state === 'hit' ? 1 + g.outT * .5 : Math.min(1, .8 + g.frontT * 1.6);
+    const k = (g.state === 'hit' ? 1 + g.outT * .5 : Math.min(1, .8 + g.frontT * 1.6)) * (g.zoom || 1);
     const sh = H * .84 * k, x = W / 2 + g.lane * W * .41 + (g.dx || 0) * W, y0 = H - sh + (g.bob || 0) * H;
     g.el.style.height = sh + 'px'; g.el.style.transform = `translate(${x}px, ${y0}px) rotate(${g.rot || 0}deg)`;
     g.el.style.zIndex = 1500; g.bub.style.zIndex = 4000;
@@ -284,8 +284,10 @@ function bossLine(g) {
   const cfg = CAST[g.c];
   g.line++;
   if (g.line >= cfg.lines.length) {
-    g.close = false; g.p = .9; g.dx = 0; g.rot = 0; g.lift = 0; g.bob = 0;
-    defeat(g); g.outHold = 2.2; sfx.win(); $('btimer').hidden = true; phase = 'end';
+    // start the rejected frame as big as she was at the end of the zoom, then knock her back
+    g.knockFrom = 1.3 + .3 * ((g.zoom || 1) - 1) / .45; g.close = false; g.p = g.knockFrom;
+    g.dx = 0; g.rot = 0; g.lift = 0; g.bob = 0; g.zoom = 1; g.knock = true;
+    defeat(g); g.outHold = 1.25; flash(); sfx.win(); $('btimer').hidden = true; phase = 'end';
     setTimeout(() => stageIdx + 1 < STAGES.length ? stageClear() : endGame(true), 2000);
     return;
   }
@@ -345,7 +347,13 @@ function step(dt) {
       if (g.frontT >= FRONT_HOLD) { hitBy(g); continue; }
     } else if (g.state === 'out') {
       g.outT += dt; const hold = g.outHold || .7;
-      if (g.outT > hold) g.p -= dt * .12;
+      if (g.knock) {
+        // hold the big rejected pose (with a shudder), then fly back down the hall, spinning a little
+        const k = Math.max(0, Math.min(1, (g.outT - .55) / .9)), e = 1 - Math.pow(1 - k, 3);
+        g.p = g.knockFrom + (.18 - g.knockFrom) * e;
+        g.rot = g.outT < .55 ? 2.5 * Math.sin(g.outT * 60) : -14 * e;
+        g.dx = g.outT < .55 ? .004 * Math.sin(g.outT * 75) : 0;
+      } else if (g.outT > hold) g.p -= dt * .12;
       g.el.style.opacity = String(Math.max(0, 1 - Math.max(0, g.outT - hold) / .6));
       if (g.outT > hold + .6) { g.el.remove(); g.bub.remove(); girls.splice(girls.indexOf(g), 1); continue; }
     } else if (g.state === 'hit') {
@@ -375,18 +383,21 @@ function stepBoss(g, dt) {
   g.lineT += dt; const lim = lineTime(g), left = Math.max(0, 1 - g.lineT / lim);
   const bt = $('btimer'); bt.firstElementChild.style.transform = `scaleX(${left})`; bt.classList.toggle('low', left < .3);
   if (cl) g.bub.style.setProperty('--fuse', String(left));
+  // final line: she slowly pushes in towards you until you finish it (or she gets you)
+  g.zoom = cl && g.line === CAST[g.c].lines.length - 1 ? 1 + .45 * Math.min(1, g.lineT / lim) : 1;
   if (g.lineT >= lim) bossTimeout(g);
 }
 function hitBy(g) {
   hearts--; combo = 0; composure = Math.max(0, composure - 20); flash(); sfx.hit();
   floatText(W / 2, H * .55, g.boss ? 'Gotcha!' : 'Too slow!', true);
   if (target === g) target = null;
-  if (g.boss) { g.close = false; g.state = 'walk'; g.bub.classList.remove('danger'); g.p = .9; g.lineT = 0; g.typed = 0; renderBubble(g); bossDash(g, 1); }
+  if (g.boss) { g.zoom = 1; g.close = false; g.state = 'walk'; g.bub.classList.remove('danger'); g.p = .9; g.lineT = 0; g.typed = 0; renderBubble(g); bossDash(g, 1); }
   else { g.state = 'hit'; g.outT = 0; g.bub.classList.remove('danger'); }
   renderHud(); echo();
   if (hearts <= 0) { phase = 'end'; sfx.lose(); setTimeout(() => endGame(false), 900); }
 }
 function endGame(won) {
+  clearActors();
   running = false; phase = 'results'; $('btimer').hidden = true;
   const mins = Math.max(playTime, 1) / 60, wpm = Math.round(goodKeys / 5 / mins);
   const acc = goodKeys + badKeys ? Math.round(goodKeys / (goodKeys + badKeys) * 100) : 0;
