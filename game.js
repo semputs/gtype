@@ -6,6 +6,9 @@ const SPR = (c, e) => `assets/sprites/${c}_${e}.webp`;
 const FRAMES = ['walk1', 'walk2', 'flustered', 'defeated'];
 const FRONT_HOLD = 1.6;   // seconds a girl stays flustered in your face before the hit
 let timeScale = 1;
+/* debug mode: no damage, the game types for you, and a panel to jump to any stage, the boss, or one girl */
+let debug = false, autoType = true, autoCd = 0;
+const AUTO_KPS = 14;
 
 /* ---------- cast ----------
    dur: seconds to cross the hall · step: seconds per movement frame · hop: bounce while moving
@@ -325,6 +328,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 function step(dt) {
+  if (debug && autoType) stepAuto(dt);
   t += dt; if (t > 0 && phase !== 'end' && phase !== 'between') playTime += dt;
   if (wobbleT > 0) { wobbleT -= dt; if (wobbleT <= 0) stage.classList.remove('wobble'); }
   if (phase === 'wave') {
@@ -352,7 +356,7 @@ function step(dt) {
     } else if (g.state === 'front') {
       g.frontT += dt;
       g.bub.style.setProperty('--fuse', String(Math.max(0, 1 - g.frontT / FRONT_HOLD)));
-      if (g.frontT >= FRONT_HOLD) { hitBy(g); continue; }
+      if (g.frontT >= FRONT_HOLD * (debug ? 3 : 1)) { hitBy(g); continue; }
     } else if (g.state === 'out') {
       g.outT += dt; const hold = g.outHold || .7;
       if (g.knock) {
@@ -396,7 +400,7 @@ function stepBoss(g, dt) {
   if (g.lineT >= lim) bossTimeout(g);
 }
 function hitBy(g) {
-  hearts--; combo = 0; composure = Math.max(0, composure - 20); flash(); sfx.hit();
+  if (!debug) hearts--; combo = 0; composure = Math.max(0, composure - 20); flash(); sfx.hit();
   floatText(W / 2, H * .55, g.boss ? 'Gotcha!' : 'Too slow!', true);
   if (target === g) target = null;
   if (g.boss) { g.zoom = 1; g.close = false; g.state = 'walk'; g.bub.classList.remove('danger'); g.p = .9; g.lineT = 0; g.typed = 0; renderBubble(g); bossDash(g, 1); }
@@ -422,6 +426,55 @@ function setPause(p) {
   if (phase !== 'wave' && phase !== 'boss') return;
   paused = p; $('pause').hidden = !p; if (!p) { last = performance.now(); focusKbd(); }
 }
+
+/* ---------- debug ---------- */
+// regulars: let her reach you and hold the close-up for a moment, then type her word
+// boss: wait out part of each line so the dashes play, and type her final line just before her zoom runs out
+function stepAuto(dt) {
+  if ((phase !== 'wave' && phase !== 'boss') || t < 0) return;
+  autoCd -= dt; if (autoCd > 0) return;
+  if (!target || !live(target)) {
+    target = null;
+    const ready = (g) => {
+      if (!live(g) || g.typed) return false;
+      if (!g.boss) return g.state === 'front' && g.frontT > .8;
+      if (g.dashT > 0 || g.delay > 0) return false;
+      const lim = lineTime(g), need = g.word.length / AUTO_KPS;
+      if (g.close && g.line === CAST[g.c].lines.length - 1) return g.lineT >= lim - need - .6;
+      return g.lineT >= lim * (g.close ? .45 : .3);
+    };
+    const g = girls.find(ready); if (!g) return;
+    typeChar(g.word[0]);
+  } else typeChar(target.word[target.typed]);
+  autoCd = 1 / AUTO_KPS;
+}
+function dbgStage(i) { audio(); if (!running) newGame(i); else { setPause(false); startStage(i); } }
+function dbgBoss() {
+  if (!running) newGame(stageIdx);
+  setPause(false); clearActors(); waveIdx = WAVE.length; t = Math.max(t, 0); startBoss();
+}
+function dbgSpawn(c) {
+  if (!running) newGame(stageIdx);
+  if (CAST[c].boss) {
+    // a boss from the other stage: switch stages first so her background and pacing are right
+    const i = STAGES.findIndex(s => s.boss === c); if (i !== stageIdx) startStage(i);
+    dbgBoss(); return;
+  }
+  if (phase !== 'wave') return;
+  t = Math.max(t, 0); spawn(c);
+}
+function setDebug(on) {
+  debug = on; $('dbg').hidden = !on;
+  $('debugBtn').setAttribute('aria-pressed', String(on));
+}
+$('dbgGirl').innerHTML = ROSTER.map(c => `<option value="${c}">${CAST[c].name}</option>`).join('');
+$('dbgAuto').addEventListener('click', () => { autoType = !autoType; $('dbgAuto').setAttribute('aria-pressed', String(autoType)); focusKbd(); });
+$('dbgS1').addEventListener('click', () => { dbgStage(0); focusKbd(); });
+$('dbgS2').addEventListener('click', () => { dbgStage(1); focusKbd(); });
+$('dbgBoss').addEventListener('click', () => { dbgBoss(); focusKbd(); });
+$('dbgSpawn').addEventListener('click', () => { dbgSpawn($('dbgGirl').value); focusKbd(); });
+$('debugBtn').addEventListener('click', () => { setDebug(true); audio(); newGame(0); });
+if (location.hash === '#debug') setDebug(true);
 
 /* ---------- title roster ---------- */
 $('roster').innerHTML = ROSTER.map(c => `<figure class="${CAST[c].boss ? 'boss' : ''}"><img src="${SPR(c, 'walk1')}" alt="${CAST[c].name}"><figcaption>${CAST[c].name.replace(' (Super)', '')}</figcaption></figure>`).join('');
