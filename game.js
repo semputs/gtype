@@ -6,19 +6,23 @@ const SPR = (c, e) => `assets/sprites/${c}_${e}.webp`;
 const FRAMES = ['walk1', 'walk2', 'flustered', 'defeated'];
 const FRONT_HOLD = 1.6;   // seconds a girl stays flustered in your face before the hit
 let timeScale = 1;
+/* debug mode: no damage, the game types for you, and a panel to jump to any stage, the boss, or one girl */
+let debug = false, autoType = true, autoCd = 0;
+const AUTO_KPS = 14;
 
 /* ---------- cast ----------
    dur: seconds to cross the hall · step: seconds per movement frame · hop: bounce while moving
+   sway: rock left and right while moving · stopgo: stand still on walk1 (e.g. taking a photo), rush on walk2
    size: height relative to the standard girl · fH: canvas height per frame relative to walk1 (from tools/build_sprites.py) */
 const CAST = {
   hana:   { name: 'Hana', dur: 6.5, step: .16, hop: 1, words: ['yay','go go','hey','wow','run','jump','dash','cheer','zoom','fight','race','yes','sprint','high five','lets go','ready','win','catch me','faster','pump up','bounce','kick off','quick','burst','energy','top speed','vroom','hustle','next lap','on fire'] },
   mio:    { name: 'Mio', dur: 10.5, step: .34, fade: true, words: ['um','hello','sorry','excuse me','um hi','notice me','its nothing','please','maybe','thank you','nevermind','oh no','eep','hi there','i made cookies','wait up'] },
   rei:    { name: 'Rei', dur: 14, step: .38, words: ['serendipity','ephemeral','melancholy','eloquent','bibliophile','introspection','metaphorical','juxtaposition','quintessential','labyrinthine','perspicacious','onomatopoeia','incandescent','soliloquy','mellifluous'] },
   sayaka: { name: 'Sayaka', dur: 9, step: .22, hop: .6, words: ['baka','hmph','not like i care','dont get the wrong idea','whatever','idiot','its not for you','as if','fine then','i just happened to pass','dont stare','geez','so annoying','you wish','zip it'] },
-  nemu:   { name: 'Nemu', dur: 13, step: .5, words: ['yawn','sleepy','five more minutes','pillow','dream','snooze','nap time','so warm','zzz','cozy','blanket','good night','mmm','nod off','lullaby'] },
+  nemu:   { name: 'Nemu', dur: 13, step: .5, sway: 1, words: ['yawn','sleepy','five more minutes','pillow','dream','snooze','nap time','so warm','zzz','cozy','blanket','good night','mmm','nod off','lullaby'] },
   chika:  { name: 'Chika', dur: 8, step: .2, hop: .5, words: ['cake','strawberry','whipped cream','taste this','bake','sugar','sweet','cupcake','frosting','oven mitt','vanilla','pancake','try a bite','sprinkles','fresh from the oven'] },
   ayame:  { name: 'Ayame', dur: 10, step: .4, words: ['destiny','the stars say','fate','crystal','omen','tarot','moonlight','curse','spirit','prophecy','red string','eclipse','the cards agree','zodiac','hex'] },
-  haruka: { name: 'Haruka', dur: 7.5, step: .2, hop: .8, words: ['say cheese','smile','click','one more','flash','pose','candid','snap','focus','perfect shot','zoom in','photo op','scoop','headline','exclusive'] },
+  haruka: { name: 'Haruka', dur: 7.5, step: .45, stopgo: true, words: ['say cheese','smile','click','one more','flash','pose','candid','snap','focus','perfect shot','zoom in','photo op','scoop','headline','exclusive'] },
   tomoe:  { name: 'Tomoe', dur: 6, step: .15, hop: 1, words: ['men','kote','do','kiai','ippon','hajime','strike','duel','honor','bushido','spar','yaa','zanshin','discipline','again'] },
   kaede:  { name: 'Kaede', boss: true, title: 'Festival committee chair', lines: ['you there stop right now','the festival committee needs your help','do you know who you are talking to','my schedule has no room for feelings','fine i admit your typing is impressive'] },
   akira:  { name: 'Akira (Super)', boss: true, size: 1.08, title: 'Powered up past her limit', lines: ['my power level is rising','this is not even my final form','i trained a thousand days for this moment','please accept my protein shake of love','with these arms i will carry you to the festival'] }
@@ -35,6 +39,8 @@ function makeWave(cast, n, gap) {
   }
   return out;
 }
+/* drift: regular girls weave left/right while walking in ({ amp: fraction of stage width up close, speed: radians per second }).
+   The design doc gives stage 4 { amp: .04, speed: 1.2 } and stage 5 { amp: .08, speed: 1.8 }. */
 const STAGES = [
   { label: 'Stage 1 · Main Hall', sub: 'The festival hall · get ready', bg: 'assets/bg/stage1.jpg', hz: .54, cast: ['hana','mio','rei','sayaka','nemu'], n: 16, gap: 2.3, boss: 'kaede' },
   { label: 'Stage 2 · Sports Complex', sub: 'The gym corridor · it gets faster', bg: 'assets/bg/stage2.jpg', hz: .54, cast: ['chika','ayame','haruka','tomoe','hana','sayaka'], n: 18, gap: 2.0, boss: 'akira' }
@@ -137,7 +143,7 @@ function mkGirl(c, word, lane) {
   el.innerHTML = `<div class="shadow"></div><img alt="" src="${SPR(c, 'walk1')}">`;
   const bub = document.createElement('div'); bub.className = 'bubble';
   actors.append(el, bub);
-  return { id: ++uid, c, word, typed: 0, lane, p: 0, dur: 10, boost: 0, state: 'walk', el, bub, img: el.querySelector('img'), shadow: el.querySelector('.shadow'), face: '', animT: Math.random() * .6, frontT: 0, fadeT: Math.random() * 6, outT: 0, line: 0 };
+  return { id: ++uid, c, word, typed: 0, lane, p: 0, dur: 10, boost: 0, state: 'walk', el, bub, img: el.querySelector('img'), shadow: el.querySelector('.shadow'), face: '', animT: Math.random() * .6, frontT: 0, fadeT: Math.random() * 6, outT: 0, line: 0, moveT: 0, phase: Math.random() * Math.PI * 2 };
 }
 function setFace(g, face) {
   if (g.face === face) return;
@@ -249,7 +255,7 @@ function finishWord(g) {
   if (g.boss) { bossLine(g); return; }
   defeat(g); sfx.clear();
 }
-function defeat(g) { g.state = 'out'; g.outT = 0; g.close = false; setFace(g, 'defeated'); g.bub.style.opacity = '0'; g.bub.classList.remove('danger'); }
+function defeat(g) { g.rot = 0; g.state = 'out'; g.outT = 0; g.close = false; setFace(g, 'defeated'); g.bub.style.opacity = '0'; g.bub.classList.remove('danger'); }
 function dropTarget() { if (target) { target.typed = 0; renderBubble(target); } target = null; echo(); }
 
 /* ---------- bosses ----------
@@ -322,6 +328,7 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 function step(dt) {
+  if (debug && autoType) stepAuto(dt);
   t += dt; if (t > 0 && phase !== 'end' && phase !== 'between') playTime += dt;
   if (wobbleT > 0) { wobbleT -= dt; if (wobbleT <= 0) stage.classList.remove('wobble'); }
   if (phase === 'wave') {
@@ -334,17 +341,22 @@ function step(dt) {
   for (const g of girls.slice()) {
     if (g.boss && g.state === 'walk') { stepBoss(g, dt); place(g); continue; }
     if (g.state === 'walk') {
-      const mul = 1 + (g.boost > 0 ? .9 : 0);
+      const cfg = CAST[g.c], mul = 1 + (g.boost > 0 ? .9 : 0);
       g.boost = Math.max(0, g.boost - dt);
-      g.p += dt / g.dur * mul;
+      // stop-and-go girls cover the same ground in half the time, standing still the other half
+      g.p += dt / g.dur * mul * (cfg.stopgo ? (g.face === 'walk1' ? 0 : 2) : 1);
+      g.moveT += dt;
+      const drift = STAGES[stageIdx].drift;
+      g.dx = (cfg.sway ? .012 * cfg.sway * Math.sin(g.moveT * 2.4 + g.phase) : 0) + (drift ? drift.amp * (.35 + .65 * g.p) * Math.sin(g.moveT * drift.speed + g.phase) : 0); // narrower far away, like the hall
+      g.rot = cfg.sway ? 5 * cfg.sway * Math.sin(g.moveT * 2.4 + g.phase) : 0;
       if (CAST[g.c].fade) { g.fadeT += dt; const o = .5 + .5 * Math.sin(g.fadeT * 2.4); g.bub.style.opacity = String(Math.max(g === target ? .35 : .08, o)); }
       g.animT += dt * mul;
       setFace(g, Math.floor(g.animT / CAST[g.c].step) % 2 ? 'walk2' : 'walk1');
-      if (g.p >= 1) { g.p = 1; g.state = 'front'; g.frontT = 0; g.close = true; setFace(g, 'flustered'); g.bub.classList.add('danger'); }
+      if (g.p >= 1) { g.p = 1; g.dx = 0; g.rot = 0; g.state = 'front'; g.frontT = 0; g.close = true; setFace(g, 'flustered'); g.bub.classList.add('danger'); }
     } else if (g.state === 'front') {
       g.frontT += dt;
       g.bub.style.setProperty('--fuse', String(Math.max(0, 1 - g.frontT / FRONT_HOLD)));
-      if (g.frontT >= FRONT_HOLD) { hitBy(g); continue; }
+      if (g.frontT >= FRONT_HOLD * (debug ? 3 : 1)) { hitBy(g); continue; }
     } else if (g.state === 'out') {
       g.outT += dt; const hold = g.outHold || .7;
       if (g.knock) {
@@ -388,7 +400,7 @@ function stepBoss(g, dt) {
   if (g.lineT >= lim) bossTimeout(g);
 }
 function hitBy(g) {
-  hearts--; combo = 0; composure = Math.max(0, composure - 20); flash(); sfx.hit();
+  if (!debug) hearts--; combo = 0; composure = Math.max(0, composure - 20); flash(); sfx.hit();
   floatText(W / 2, H * .55, g.boss ? 'Gotcha!' : 'Too slow!', true);
   if (target === g) target = null;
   if (g.boss) { g.zoom = 1; g.close = false; g.state = 'walk'; g.bub.classList.remove('danger'); g.p = .9; g.lineT = 0; g.typed = 0; renderBubble(g); bossDash(g, 1); }
@@ -414,6 +426,55 @@ function setPause(p) {
   if (phase !== 'wave' && phase !== 'boss') return;
   paused = p; $('pause').hidden = !p; if (!p) { last = performance.now(); focusKbd(); }
 }
+
+/* ---------- debug ---------- */
+// regulars: let her reach you and hold the close-up for a moment, then type her word
+// boss: wait out part of each line so the dashes play, and type her final line just before her zoom runs out
+function stepAuto(dt) {
+  if ((phase !== 'wave' && phase !== 'boss') || t < 0) return;
+  autoCd -= dt; if (autoCd > 0) return;
+  if (!target || !live(target)) {
+    target = null;
+    const ready = (g) => {
+      if (!live(g) || g.typed) return false;
+      if (!g.boss) return g.state === 'front' && g.frontT > .8;
+      if (g.dashT > 0 || g.delay > 0) return false;
+      const lim = lineTime(g), need = g.word.length / AUTO_KPS;
+      if (g.close && g.line === CAST[g.c].lines.length - 1) return g.lineT >= lim - need - .6;
+      return g.lineT >= lim * (g.close ? .45 : .3);
+    };
+    const g = girls.find(ready); if (!g) return;
+    typeChar(g.word[0]);
+  } else typeChar(target.word[target.typed]);
+  autoCd = 1 / AUTO_KPS;
+}
+function dbgStage(i) { audio(); if (!running) newGame(i); else { setPause(false); startStage(i); } }
+function dbgBoss() {
+  if (!running) newGame(stageIdx);
+  setPause(false); clearActors(); waveIdx = WAVE.length; t = Math.max(t, 0); startBoss();
+}
+function dbgSpawn(c) {
+  if (!running) newGame(stageIdx);
+  if (CAST[c].boss) {
+    // a boss from the other stage: switch stages first so her background and pacing are right
+    const i = STAGES.findIndex(s => s.boss === c); if (i !== stageIdx) startStage(i);
+    dbgBoss(); return;
+  }
+  if (phase !== 'wave') return;
+  t = Math.max(t, 0); spawn(c);
+}
+function setDebug(on) {
+  debug = on; $('dbg').hidden = !on;
+  $('debugBtn').setAttribute('aria-pressed', String(on));
+}
+$('dbgGirl').innerHTML = ROSTER.map(c => `<option value="${c}">${CAST[c].name}</option>`).join('');
+$('dbgAuto').addEventListener('click', () => { autoType = !autoType; $('dbgAuto').setAttribute('aria-pressed', String(autoType)); focusKbd(); });
+$('dbgS1').addEventListener('click', () => { dbgStage(0); focusKbd(); });
+$('dbgS2').addEventListener('click', () => { dbgStage(1); focusKbd(); });
+$('dbgBoss').addEventListener('click', () => { dbgBoss(); focusKbd(); });
+$('dbgSpawn').addEventListener('click', () => { dbgSpawn($('dbgGirl').value); focusKbd(); });
+$('debugBtn').addEventListener('click', () => { setDebug(true); audio(); newGame(0); });
+if (location.hash === '#debug') setDebug(true);
 
 /* ---------- title roster ---------- */
 $('roster').innerHTML = ROSTER.map(c => `<figure class="${CAST[c].boss ? 'boss' : ''}"><img src="${SPR(c, 'walk1')}" alt="${CAST[c].name}"><figcaption>${CAST[c].name.replace(' (Super)', '')}</figcaption></figure>`).join('');

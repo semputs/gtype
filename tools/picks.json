@@ -1,64 +1,70 @@
 {
  "hana": {
-  "run": "x_hana_run_2",
-  "flus": "x_hana_flus_t0",
-  "defe": "x_hana_defe_i2"
+  "run": "gl_hana_move1_00001_",
+  "flus": "gl_hana_flustered_00002_",
+  "defe": "gl_hana_rejected_00001_"
  },
  "mio": {
-  "run": "x_mio_run_2",
-  "flus": "x_mio_flus_i2",
-  "defe": "x_mio_defe_t0",
-  "defe_scale": 0.86
+  "run": "gl_mio_move2_00007_recolor",
+  "flus": "gl_mio_flustered_00002_",
+  "defe": "gl_mio_rejected_00001_"
  },
  "rei": {
-  "run": "x_rei_run_2",
-  "flus": "x_rei_flus_i2",
-  "defe": "x_rei_defe_t0"
+  "run": "gl_rei_move1_00003_fix_00001_",
+  "dash": "gl_rei_move2_00004_",
+  "flus": "gl_rei_flustered_00001_",
+  "defe": "gl_rei_rejected_00001_"
  },
  "sayaka": {
-  "run": "x_sayaka_run_1",
-  "flus": "x_sayaka_flus_i2",
-  "defe": "x_sayaka_defe_i3"
+  "run": "gl_sayaka_move1_00002_",
+  "dash": "gl_sayaka_move2_00001_",
+  "flus": "gl_sayaka_flustered_00001_",
+  "defe": "gl_sayaka_rejected_00001_"
  },
  "nemu": {
-  "run": "x_nemu_run_0",
-  "flus": "x_nemu_flus_i2",
-  "defe": "x_nemu_defe_t0"
+  "run": "gl_nemu_move1_00001_",
+  "dash": "gl_nemu_move2_00002_",
+  "flus": "gl_nemu_flustered_00001_",
+  "defe": "gl_nemu_rejected_00001_",
+  "flus_crop": 0.36
  },
  "chika": {
-  "run": "x_chika_run_0",
-  "flus": "x_chika_flus_i3",
-  "defe": "x_chika_defe_i3"
+  "run": "gl_chika_move1_00001_",
+  "dash": "gl_chika_move2_00001_",
+  "flus": "gl_chika_flustered_00001_",
+  "defe": "gl_chika_rejected_00001_"
  },
  "ayame": {
-  "run": "x_ayame_run_2",
-  "flus": "x_ayame_flus_i2",
-  "defe": "x_ayame_defe_t0"
+  "run": "gl_ayame_move1_00001_",
+  "dash": "gl_ayame_move2_00001_",
+  "flus": "gl_ayame_flustered_00002_",
+  "defe": "gl_ayame_rejected_00002_"
  },
  "haruka": {
-  "run": "x_haruka_run_1",
-  "flus": "x_haruka_flus_i3",
-  "defe": "x_haruka_defe_i3"
+  "run": "gl_haruka_move1_00001_",
+  "dash": "gl_haruka_move2_00003_",
+  "flus": "gl_haruka_flustered_00001_",
+  "defe": "gl_haruka_rejected_00001_"
  },
  "tomoe": {
-  "run": "x_tomoe_run_2",
-  "flus": "x_tomoe_flus_i2",
-  "defe": "x_tomoe_defe2_i1",
-  "defe_scale": 0.72
+  "run": "gl_tomoe_move1_00001_",
+  "dash": "gl_tomoe_move2_00001_",
+  "flus": "gl_tomoe_flustered_00002_",
+  "defe": "gl_tomoe_rejected_00001_"
  },
  "kaede": {
-  "run": "x_kaede_run_0",
-  "dash": "x_kaede_dash_0",
-  "dash_scale": 0.86,
-  "flus": "x_kaede_flus_i3",
-  "defe": "x_kaede_defe_i2"
+  "run": "gl_kaede_stand_00001_",
+  "dash": "gl_kaede_dash_00001_",
+  "flus": "gl_kaede_flustered_00002_",
+  "defe": "gl_kaede_rejected_00001_"
  },
  "akira": {
-  "run": "x_akira_run_2",
-  "dash": "x_akira_dash_0",
-  "dash_scale": 0.86,
-  "flus": "x_akira_flus_t1",
-  "defe": "x_akira_defe_t1",
-  "defe_scale": 0.78
+  "run": "gl_akira_super_move1_00001_",
+  "dash": "gl_akira_super_move2_00001_",
+  "flus": "gl_akira_super_flustered_00001_",
+  "defe": "gl_akira_super_rejected_00001_",
+  "defe_scale": 0.72,
+  "flus_top": 0.12,
+  "flus_crop": 0.42
  }
 }

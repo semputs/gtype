@@ -71,6 +71,13 @@ body {
 @keyframes pulse { to { box-shadow: 0 0 0 calc(var(--u) * .45) rgba(255,61,94,.35); } }
 .demo-btn { position: absolute; left: calc(var(--u) * 1.6); bottom: calc(var(--u) * 1.6); pointer-events: auto; font: 800 calc(var(--u) * .9)/1 var(--f-body); letter-spacing: .1em; text-transform: uppercase; color: #fff; background: rgba(29,20,48,.7); border: 0; border-radius: 99px; padding: calc(var(--u) * .5) calc(var(--u) * .9); cursor: pointer; }
 .demo-btn[aria-pressed="true"] { background: var(--sakura); }
+/* debug panel: jump around and watch every animation without typing */
+.dbg { position: absolute; left: calc(var(--u) * 1.6); top: calc(var(--u) * 6.5); pointer-events: auto; display: flex; flex-direction: column; gap: calc(var(--u) * .5); background: rgba(29,20,48,.78); border-radius: calc(var(--u) * .8); padding: calc(var(--u) * .7); font: 800 calc(var(--u) * .85)/1 var(--f-body); color: #fff; z-index: 6000; }
+.dbg .row { display: flex; gap: calc(var(--u) * .4); flex-wrap: wrap; align-items: center; }
+.dbg b { letter-spacing: .12em; text-transform: uppercase; color: var(--sun); }
+.dbg button, .dbg select { font: inherit; color: #fff; background: rgba(255,255,255,.14); border: 0; border-radius: 99px; padding: calc(var(--u) * .4) calc(var(--u) * .8); cursor: pointer; }
+.dbg button[aria-pressed="true"] { background: var(--sakura); }
+.dbg select option { color: #000; }
 .roster { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: calc(var(--u) * .5); align-items: end; width: 100%; }
 .roster figure { margin: 0; display: grid; justify-items: center; gap: calc(var(--u) * .3); }
 .roster img { height: calc(var(--u) * 10); width: auto; max-width: 100%; object-fit: contain; object-position: bottom; }
@@ -179,15 +186,20 @@ body {
     <button class="demo-btn" id="slow" type="button" aria-pressed="false">Slow motion</button>
   </div>
   <div id="banner"></div>
+  <div class="dbg" id="dbg" hidden>
+    <b>Debug</b>
+    <div class="row"><button type="button" id="dbgAuto" aria-pressed="true">Auto-type</button><button type="button" id="dbgS1">Stage 1</button><button type="button" id="dbgS2">Stage 2</button><button type="button" id="dbgBoss">Boss</button></div>
+    <div class="row"><select id="dbgGirl" aria-label="Girl to send in"></select><button type="button" id="dbgSpawn">Send in</button></div>
+  </div>
 
   <section class="screen" id="title">
     <div class="panel">
       <h1 class="logo">Gal<b>Type</b></h1>
       <p class="tag">HEARTBEAT misfired and the whole festival is coming to confess. Type their lines before they reach you.</p>
       <div class="roster" id="roster"></div>
-      <div class="btn-row"><button class="btn" id="start" type="button">Start</button><button class="btn ghost" id="start2" type="button">Skip to stage 2</button></div>
+      <div class="btn-row"><button class="btn" id="start" type="button">Start</button><button class="btn ghost" id="start2" type="button">Skip to stage 2</button><button class="btn ghost" id="debugBtn" type="button">Debug mode</button></div>
       <p class="hint">Press <kbd>Enter</kbd> to start · <kbd>Backspace</kbd> drops your target · <kbd>Esc</kbd> pauses</p>
-      <p class="hint build">Build 2026-10-23c · boss zoom + knockback</p>
+      <p class="hint build">Build 2026-10-24b · new sprites + debug mode</p>
     </div>
   </section>
 
@@ -216,7 +228,7 @@ body {
   <input id="kbd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Type here">
 </div>
 
-<script src="assets/sprites/meta.js?v=2026-10-23c"></script>
-<script src="game.js?v=2026-10-23c"></script>
+<script src="assets/sprites/meta.js?v=2026-10-24b"></script>
+<script src="game.js?v=2026-10-24b"></script>
 </body>
 </html>

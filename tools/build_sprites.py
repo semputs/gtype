@@ -5,7 +5,7 @@ picks.json: { "hana": {"run": "x_hana_run_2", "dash": null, "flus": "...", "defe
                        "flus_crop": .47, "defe_scale": 1.0}, ... }
 - walk1 = run frame; walk2 = dash frame, or the run frame mirrored with the original head pasted back
 - run/dash/defeated are scaled so the figure's height matches (defe_scale shrinks crouching poses)
-- flustered = the full-body render cropped to waist-up
+- flustered = the full-body render cropped to a head-and-shoulders close-up (flus_top/flus_crop = where the crop starts and how much of the figure height it keeps)
 Writes <c>_<frame>.webp plus meta.js (canvas heights relative to walk1, used by game.js).
 """
 import json, os, subprocess, sys
@@ -19,7 +19,9 @@ H = 760  # walk1 canvas height
 
 
 def cut(name):
-    src = os.path.join(raw, name + '_00001_.png'); dst = os.path.join(tmp, name + '.png')
+    src = os.path.join(raw, name + '.png')
+    if not os.path.exists(src): src = os.path.join(raw, name + '_00001_.png')
+    dst = os.path.join(tmp, name + '.png')
     if not os.path.exists(dst):
         subprocess.run([sys.executable, '-I', os.path.join(HERE, 'cut.py'), src, dst], check=True, capture_output=True)
     return cv2.imread(dst, cv2.IMREAD_UNCHANGED)
@@ -83,8 +85,8 @@ for c, p in picks.items():
         img = centred(im, body_cx(im), max(H, im.shape[0]) if f != 'walk1' else H)
         cv2.imwrite(os.path.join(out, f'{c}_{f}.webp'), img, [cv2.IMWRITE_WEBP_QUALITY, 90])
         if img.shape[0] != H: m[f] = round(img.shape[0] / H, 3)
-    # flustered: waist-up crop of a full-body render
-    fl = bbox(cut(p['flus'])); fl = fl[:int(fl.shape[0] * p.get('flus_crop', .47))]
+    # flustered: head-and-shoulders crop of a full-body render
+    fl = bbox(cut(p['flus'])); t = int(fl.shape[0] * p.get('flus_top', 0)); fl = fl[t:t + int(fl.shape[0] * p.get('flus_crop', .3))]
     fl = bbox(np.concatenate([fl, np.zeros((1, fl.shape[1], 4), np.uint8)]))
     fl = fit_h(fl, 900)
     cv2.imwrite(os.path.join(out, f'{c}_flustered.webp'), centred(fl, body_cx(fl, (0, .5))), [cv2.IMWRITE_WEBP_QUALITY, 90])

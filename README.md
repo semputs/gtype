@@ -7,8 +7,9 @@ Claude's version of GalType, a typing game where hypnotized festival-goers run a
 ## Current build: 2 stages
 - **Stage 1 · Main Hall:** Hana, Mio, Rei, Sayaka, Nemu, then the boss **Kaede** (festival committee chair).
 - **Stage 2 · Sports Complex:** Chika, Ayame, Haruka, Tomoe, Hana, Sayaka, then the boss **Akira (Super)**.
-- Regular girls run or walk at their own speed (Hana and Tomoe sprint, Nemu shuffles). Each has two movement frames, a waist-up **flustered** close-up when she reaches you (1.6 s fuse to still type her word) and her own comical **rejected** pose.
+- Regular girls run or walk at their own speed (Hana and Tomoe sprint, Nemu shuffles and sways side to side, Haruka stops to take a photo on her first frame, then rushes in on her second). Each has two movement frames, a waist-up **flustered** close-up when she reaches you (1.6 s fuse to still type her word) and her own comical **rejected** pose.
 - **Bosses** hover and drift down the hall with a glowing aura. Each finished line, or a line you run out of time on (yellow timer bar), makes her dash a step closer, leaving afterimages. Her **last two lines** she says right in your face as a flustered close-up; running out of time there costs a heart and knocks her back down the hall. On the very last line she slowly pushes in closer; beat it and her rejected pose fills the screen before she is blasted back down the hall.
+- A stage can set `drift` so regular girls weave left and right as they come in (planned for stages 4 and 5).
 - Clearing stage 1 gives back one heart. "Skip to stage 2" on the title screen jumps straight there. **Slow motion** (bottom left) plays at 35% speed.
 
 Everyone wears the festival whites (white blouse, white mid-thigh skirt, white sneakers) plus their own fixed accessories; club members wear their club gear.
