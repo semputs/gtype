@@ -40,6 +40,12 @@ for i in range(1, n):
     # flat white clothing pockets usually carry a faint tint, so require near-perfect 255 and low saturation
     if a > w * h * .006 and np.percentile(mn[m], 5) >= 253 and sat[m].max() <= 3:
         bg |= m
+    # on a flat grey backdrop the pockets are that grey instead
+    elif bgcol.min() < 228 and a > w * h * .006 and np.percentile(np.abs(f[m] - bgcol).max(1), 95) <= 10:
+        bg |= m
+    # between the legs, a floor-shading gradient can leave a light grey pocket; no white clothing sits that low
+    elif a > w * h * .004 and np.nonzero(m)[0].mean() > h * .6 and np.percentile(mn[m], 5) >= 200 and np.percentile(sat[m], 95) <= 14:
+        bg |= m
 bg = cv2.dilate(bg.astype(np.uint8), np.ones((7, 7), np.uint8)) > 0
 bg &= bglike
 
@@ -55,7 +61,7 @@ alpha = cv2.GaussianBlur(keep.astype(np.float32), (3, 3), 0)
 # remove white halo: un-mix edge pixels from the white background
 a = alpha[..., None]
 col = img.astype(np.float32)
-un = np.where(a > .05, (col - (1 - a) * 255) / np.maximum(a, .05), col)
+un = np.where(a > .05, (col - (1 - a) * (bgcol if bgcol.min() < 228 else 255)) / np.maximum(a, .05), col)
 out = np.dstack([np.clip(un, 0, 255).astype(np.uint8), (alpha * 255).astype(np.uint8)])
 cv2.imwrite(dst, out)
 print(f"{src.split('/')[-1]}: fg {keep.mean() * 100:.0f}%")
